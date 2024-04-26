@@ -1,2 +1,2 @@
 # local-openelm
-Learning how to deploy a local elm 
+Learning how to deploy a local LLM using Apple's OpenELM 
