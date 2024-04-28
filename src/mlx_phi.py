@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from time import perf_counter
 from typing import Generator
 
 import mlx.core as mx
@@ -52,13 +53,15 @@ class MlxPhi:
         self.eos_tokens.append("</s>")
         self.eos_token_ids.append(2)
 
+        self.stop = False
 
-    def generate(self, prompt: str):
+
+    def generate(self, prompt: str, verbose: bool = False):
         """Provides a response to a prompt."""
         self.tokenizer.apply_chat_template([{"role": "user",
                                              "content": prompt}],
                                            tokenize=False)
-        return generate(self.model, self.tokenizer, prompt, temp=0.4)
+        return generate(self.model, self.tokenizer, prompt, verbose=verbose)
 
     def generate_stream(self,
                         prompt: str,
@@ -74,23 +77,42 @@ class MlxPhi:
         detokenizer.reset()
 
         response = ""
-
+        start_time = perf_counter()
+        end_time = None
         for (token, prob), n in zip(generate_step(prompt_tokens,
                                                   self.model,
-                                                  temp=0.4),
+                                                  temp=0),
                                     range(max_tokens)):
-            if token in self.eos_token_ids:
-                break
+            if n == 0:
+                self.stop = False
+            else:
+                if self.stop:
+                    break
+            # if token in self.eos_token_ids:
+            #     break
             if token > 32000:
+                if token in self.eos_token_ids:
+                    self.stop = True
                 if token in self.added_token_ids:
                     yield self.added_token_ids[token] + "\n"
             detokenizer.add_token(token)
             token_word = detokenizer.last_segment
             response += token_word
             yield token_word
-
+        if end_time is None:
+            end_time = perf_counter()
         self.messages.append({"role": "assistant",
                               "content": response})
+        time_taken = end_time - start_time
+        speed = n / time_taken
+        if speed >= 1:
+            unit = "tokens/sec"
+        else:
+            unit = "secs/token"
+        print()
+        print(f"Tokens printed: {n}")
+        print(f"Took:           {time_taken:.3f}")
+        print(f"Speed:          {speed:.3f} {unit}")
 
 
 if __name__ == '__main__':
