@@ -40,11 +40,13 @@ class MlxPhi:
 
         # Now figure out what the added tokens were
         with open(model_fp / "added_tokens.json") as f:
-            added_tokens = json.load(f)
+            self.added_tokens = json.load(f)
+        self.added_token_ids = {}
+        for k, v in self.added_tokens.items():
+            self.added_token_ids[v] = k
 
         self.eos_tokens = ["<|end|>", "<|endoftext|>"]
-
-        self.eos_token_ids = [added_tokens[t] for t in self.eos_tokens]
+        self.eos_token_ids = [self.added_tokens[t] for t in self.eos_tokens]
 
         # The default string end
         self.eos_tokens.append("</s>")
@@ -79,6 +81,9 @@ class MlxPhi:
                                     range(max_tokens)):
             if token in self.eos_token_ids:
                 break
+            if token > 32000:
+                if token in self.added_token_ids:
+                    yield self.added_token_ids[token] + "\n"
             detokenizer.add_token(token)
             token_word = detokenizer.last_segment
             response += token_word
