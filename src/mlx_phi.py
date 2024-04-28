@@ -61,7 +61,10 @@ class MlxPhi:
         self.tokenizer.apply_chat_template([{"role": "user",
                                              "content": prompt}],
                                            tokenize=False)
-        return generate(self.model, self.tokenizer, prompt, verbose=verbose)
+        if verbose:
+            return generate(self.model, self.tokenizer, prompt, verbose=verbose)
+
+        return "".join([token for token in self.generate_stream(prompt)])
 
     def generate_stream(self,
                         prompt: str,
