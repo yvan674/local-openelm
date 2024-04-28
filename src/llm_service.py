@@ -155,6 +155,11 @@ def generate(
                 'inference device is not set, using cuda:0, %s',
                 torch.cuda.get_device_name(0)
             )
+        elif torch.backends.mps.is_available():
+            device = "mps"
+            logging.warning(
+                "inference device is not set, using mps"
+            )
         else:
             device = 'cpu'
             logging.warning(
@@ -203,9 +208,15 @@ def generate(
         draft_model.to(device).eval()
 
     # Prepare the prompt
-    tokenized_prompt = tokenizer(prompt)
+    chat = [
+        {"role": "system",
+         "content": "You are a friendly assistant."},
+        {"role": "user",
+         "content": prompt}
+    ]
+    tokenized_prompt = tokenizer.apply_chat_template(chat)
     tokenized_prompt = torch.tensor(
-        tokenized_prompt['input_ids'],
+        tokenized_prompt,
         device=device
     )
 
@@ -231,7 +242,18 @@ def generate(
 
 
 if __name__ == '__main__':
-    _m = OpenELM(Path("/Users/Yvan/Git/OpenELM-270M-Instruct"))
+    # _m = OpenELM(Path("/Users/Yvan/Git/OpenELM-270M-Instruct"))
+    #
+    # for token in _m.stream_generate("Hello there!"):
+    #     print(token, sep="")
+    _out, _g_time = generate(
+        "Hi there, how are you?",
+        str(Path("/Users/Yvan/Git/OpenELM-270M-Instruct")),
+        HF_ACCESS_TOKEN,
+        device="cpu",
+        max_length=64
+    )
 
-    for token in _m.stream_generate("Hello there!"):
-        print(token, sep="")
+    print("Response:")
+    print(_out)
+    print(f"Generation time: {_g_time}")
